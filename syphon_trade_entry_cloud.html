@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Syphon Trade Entry — Cloud</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0a0a0a; --surface: #111; --surface-2: #1a1a1a; --border: #2a2a2a;
+    --text: #e8e8e8; --text-dim: #666; --green: #22c55e; --red: #ef4444;
+    --yellow: #eab308; --accent: #c9a96e; --blue: #3b82f6;
+  }
+  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
+  .container { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+  .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .header-left { display: flex; align-items: center; gap: 10px; }
+  .logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), #8b7355); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .header h1 { font-size: 15px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+  .header h1 span { color: var(--accent); }
+  .status-pill { font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 4px 10px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-dim); }
+  .status-pill.active { background: rgba(34,197,94,0.12); border-color: var(--green); color: var(--green); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
+  .config-bar { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; display: flex; gap: 10px; align-items: center; }
+  .config-bar label { font-size: 11px; color: var(--text-dim); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+  .config-bar input { flex: 1; background: var(--surface-2); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 8px; font-size: 12px; font-family: 'JetBrains Mono', monospace; outline: none; }
+  .config-bar input:focus { border-color: var(--accent); }
+  .config-bar button { background: var(--blue); color: #fff; border: none; padding: 8px 14px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .config-bar button:hover { background: #2563eb; }
+  .save-indicator { font-size: 10px; color: var(--text-dim); text-align: right; font-family: 'JetBrains Mono', monospace; }
+  .section-title { font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .chart-deck { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .chart-slot { aspect-ratio: 16/10; background: var(--surface); border: 2px dashed var(--border); border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; }
+  .chart-slot:hover { border-color: var(--accent); background: var(--surface-2); }
+  .chart-slot.has-image { border-style: solid; border-color: var(--border); }
+  .chart-slot img { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; }
+  .chart-slot .slot-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; z-index: 2; background: rgba(0,0,0,0.7); padding: 2px 8px; border-radius: 4px; position: absolute; bottom: 6px; left: 6px; }
+  .chart-slot .upload-icon { font-size: 20px; color: var(--text-dim); margin-bottom: 4px; z-index: 2; }
+  .chart-slot .upload-text { font-size: 11px; color: var(--text-dim); z-index: 2; }
+  .chart-slot input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; z-index: 3; }
+  .remove-img { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.8); color: var(--red); border: none; width: 20px; height: 20px; border-radius: 4px; font-size: 12px; cursor: pointer; z-index: 4; display: none; }
+  .chart-slot.has-image .remove-img { display: block; }
+  .scorecard { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px; position: relative; overflow: hidden; }
+  .scorecard::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--green), var(--yellow), var(--red)); opacity: 0.5; }
+  .scorecard-header { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .scorecard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .column { display: flex; flex-direction: column; gap: 8px; }
+  .col-header { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; padding: 6px 10px; border-radius: 6px; display: flex; align-items: center; gap: 6px; }
+  .col-risk { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
+  .col-compliance { background: rgba(34,197,94,0.12); color: var(--green); border: 1px solid rgba(34,197,94,0.2); }
+  .check-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; background: var(--surface-2); border: 1px solid transparent; cursor: pointer; transition: all 0.15s; font-size: 12px; }
+  .check-item:hover { border-color: #3a3a3a; }
+  .check-item input[type="checkbox"] { appearance: none; width: 16px; height: 16px; border: 2px solid var(--border); border-radius: 4px; cursor: pointer; position: relative; transition: all 0.15s; flex-shrink: 0; }
+  .check-item input[type="checkbox"]:checked { background: var(--green); border-color: var(--green); }
+  .check-item input[type="checkbox"]:checked::after { content: '✓'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #000; font-size: 10px; font-weight: 700; }
+  .check-item.risk input[type="checkbox"]:checked { background: var(--red); border-color: var(--red); }
+  .check-item.risk input[type="checkbox"]:checked::after { color: #fff; }
+  .check-item.checked { opacity: 0.5; }
+  .check-item.checked .item-text { text-decoration: line-through; color: var(--text-dim); }
+  .item-text { font-weight: 500; }
+  .item-sub { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+  .meters { margin-top: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .meter-row { display: flex; flex-direction: column; gap: 6px; }
+  .meter-label { display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .meter-track { height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+  .meter-fill { height: 100%; border-radius: 3px; transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+  .fill-green { background: linear-gradient(90deg, #16a34a, var(--green)); }
+  .fill-red { background: linear-gradient(90deg, #dc2626, var(--red)); }
+  .verdict-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px; text-align: center; position: relative; overflow: hidden; }
+  .verdict-panel::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--verdict-color, var(--green)); box-shadow: 0 0 20px var(--verdict-glow, var(--green-glow)); }
+  .verdict-icon { font-size: 32px; margin-bottom: 8px; }
+  .verdict-title { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
+  .verdict-sub { font-size: 12px; color: var(--text-dim); }
+  .verdict-score { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .notes-area { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; min-height: 80px; font-size: 13px; color: var(--text); outline: none; resize: vertical; font-family: inherit; line-height: 1.6; }
+  .notes-area:empty::before { content: 'One-line lesson: What will you do differently next time?'; color: var(--text-dim); }
+  .breach-warning { display: none; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); border-radius: 12px; padding: 14px 16px; font-size: 12px; font-weight: 600; color: var(--red); text-align: center; letter-spacing: 0.5px; animation: shake 0.5s ease; }
+  .breach-warning.show { display: block; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+  .sync-row { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
+  .sync-btn { flex: 1; background: var(--surface-2); border: 1px solid var(--border); color: var(--text); padding: 10px; border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .sync-btn:hover { border-color: var(--accent); }
+  .sync-btn.primary { background: var(--green); color: #000; border-color: var(--green); }
+  .sync-btn.primary:hover { background: #16a34a; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="header-left">
+      <div class="logo-icon">⚡</div>
+      <h1>Syphon <span>Command</span> <span style="color:var(--blue);font-size:11px">CLOUD</span></h1>
+    </div>
+    <div class="status-pill" id="system-status">SYSTEM STANDBY</div>
+  </div>
+
+  <!-- CONFIG: Paste your Apps Script URL here -->
+  <div class="config-bar">
+    <label>🔗 Syphon Brain URL</label>
+    <input type="text" id="brain-url" placeholder="Paste your Google Apps Script Web App URL here...">
+    <button onclick="testConnection()">Connect</button>
+  </div>
+  <div class="save-indicator" id="save-indicator">💾 Not connected to cloud yet</div>
+
+  <div>
+    <div class="section-title">📸 Chart Evidence</div>
+    <div class="chart-deck">
+      <div class="chart-slot" id="slot-1" onclick="document.getElementById('file-1').click()">
+        <input type="file" id="file-1" accept="image/*" onchange="loadImage(this, 'slot-1')">
+        <div class="upload-icon">📉</div><div class="upload-text">Execution</div>
+        <div class="slot-label">Entry Chart</div>
+        <button class="remove-img" onclick="removeImage(event, 'slot-1')">×</button>
+      </div>
+      <div class="chart-slot" id="slot-2" onclick="document.getElementById('file-2').click()">
+        <input type="file" id="file-2" accept="image/*" onchange="loadImage(this, 'slot-2')">
+        <div class="upload-icon">⏱️</div><div class="upload-text">15min Context</div>
+        <div class="slot-label">15M</div>
+        <button class="remove-img" onclick="removeImage(event, 'slot-2')">×</button>
+      </div>
+      <div class="chart-slot" id="slot-3" onclick="document.getElementById('file-3').click()">
+        <input type="file" id="file-3" accept="image/*" onchange="loadImage(this, 'slot-3')">
+        <div class="upload-icon">🕐</div><div class="upload-text">1H Structure</div>
+        <div class="slot-label">1H</div>
+        <button class="remove-img" onclick="removeImage(event, 'slot-3')">×</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="scorecard">
+    <div class="scorecard-header"><span>◈</span> OPERATIONAL PSYCHOLOGY OVERLAY</div>
+    <div class="scorecard-grid">
+      <div class="column">
+        <div class="col-header col-risk"><span>🚨</span> OPERATIONAL RISK EXPOSURE</div>
+        <label class="check-item risk"><input type="checkbox" data-type="risk" id="r1" onchange="calculate()"><div><div class="item-text">Revenge Execution</div><div class="item-sub">Emotionally driven entry</div></div></label>
+        <label class="check-item risk"><input type="checkbox" data-type="risk" id="r2" onchange="calculate()"><div><div class="item-text">FOMO / Chased Leg</div><div class="item-sub">Entered after move started</div></div></label>
+        <label class="check-item risk"><input type="checkbox" data-type="risk" id="r3" onchange="calculate()"><div><div class="item-text">Over-Leveraged Position</div><div class="item-sub">Exceeded risk parameters</div></div></label>
+        <label class="check-item risk"><input type="checkbox" data-type="risk" id="r4" onchange="calculate()"><div><div class="item-text">Moved Stop Loss / Ignored Plan</div><div class="item-sub">Broke system rules mid-trade</div></div></label>
+        <label class="check-item risk"><input type="checkbox" data-type="risk" id="r5" onchange="calculate()"><div><div class="item-text">Early Liquidation / Scared Money</div><div class="item-sub">Closed before target or plan</div></div></label>
+      </div>
+      <div class="column">
+        <div class="col-header col-compliance"><span>✅</span> RULES & COMPLIANCE</div>
+        <label class="check-item"><input type="checkbox" data-type="compliance" id="c1" onchange="calculate()"><div><div class="item-text">Waited for HTF Sweep</div><div class="item-sub">Liquidity taken before entry</div></div></label>
+        <label class="check-item"><input type="checkbox" data-type="compliance" id="c2" onchange="calculate()"><div><div class="item-text">Checked Macro News</div><div class="item-sub">No high-impact events active</div></div></label>
+        <label class="check-item"><input type="checkbox" data-type="compliance" id="c3" onchange="calculate()"><div><div class="item-text">MSS / Setup Confirmed</div><div class="item-sub">Structure shift validated</div></div></label>
+        <label class="check-item"><input type="checkbox" data-type="compliance" id="c4" onchange="calculate()"><div><div class="item-text">Premium / Discount Zone</div><div class="item-sub">Entry at optimal price</div></div></label>
+        <label class="check-item"><input type="checkbox" data-type="compliance" id="c5" onchange="calculate()"><div><div class="item-text">Execution Walkaway</div><div class="item-sub">Closed charts post-trade</div></div></label>
+      </div>
+    </div>
+    <div class="meters">
+      <div class="meter-row">
+        <div class="meter-label"><span style="display:flex;align-items:center;gap:6px"><span style="color:var(--green)">●</span> Rules Compliance Rate</span><span id="compliance-text" style="color:var(--green)">0%</span></div>
+        <div class="meter-track"><div class="meter-fill fill-green" id="compliance-bar" style="width:0%"></div></div>
+      </div>
+      <div class="meter-row">
+        <div class="meter-label"><span style="display:flex;align-items:center;gap:6px"><span style="color:var(--red)">●</span> Operational Risk Exposure</span><span id="risk-text" style="color:var(--red)">0%</span></div>
+        <div class="meter-track"><div class="meter-fill fill-red" id="risk-bar" style="width:0%"></div></div>
+      </div>
+    </div>
+    <div class="breach-warning" id="breach-warning">⚠️ SYSTEM BREACH DETECTED // MAXIMUM DRAWDOWN RISK</div>
+    <div class="sync-row">
+      <button class="sync-btn primary" onclick="saveToCloud()">☁️ Save to Syphon Brain</button>
+      <button class="sync-btn" onclick="loadFromCloud()">📥 Load from Cloud</button>
+    </div>
+  </div>
+
+  <div class="verdict-panel" id="verdict-panel">
+    <div class="verdict-icon" id="verdict-icon">⏳</div>
+    <div class="verdict-title" id="verdict-title" style="color:var(--text-dim)">AWAITING INPUT</div>
+    <div class="verdict-sub" id="verdict-sub">Check your execution criteria above</div>
+    <div class="verdict-score" id="verdict-score">Compliance: 0/5 | Risk: 0/5</div>
+  </div>
+
+  <div>
+    <div class="section-title">📝 Trade Debrief</div>
+    <div class="notes-area" id="notes-area" contenteditable="true"></div>
+  </div>
+</div>
+
+<script>
+  // ─── CONFIG ───
+  let BRAIN_URL = localStorage.getItem('syphon_brain_url') || '';
+  let TRADE_ID = new URLSearchParams(window.location.search).get('trade') || 'default';
+  if (BRAIN_URL) document.getElementById('brain-url').value = BRAIN_URL;
+
+  function getBrainUrl() {
+    const url = document.getElementById('brain-url').value.trim();
+    if (!url) { alert('Paste your Syphon Brain URL first'); return null; }
+    BRAIN_URL = url;
+    localStorage.setItem('syphon_brain_url', url);
+    return url;
+  }
+
+  function setStatus(msg, color) {
+    const el = document.getElementById('save-indicator');
+    el.textContent = msg;
+    el.style.color = color || 'var(--text-dim)';
+  }
+
+  // ─── CALCULATE ───
+  function calculate() {
+    const risks = document.querySelectorAll('input[data-type="risk"]:checked').length;
+    const totalRisks = document.querySelectorAll('input[data-type="risk"]').length;
+    const compliance = document.querySelectorAll('input[data-type="compliance"]:checked').length;
+    const totalCompliance = document.querySelectorAll('input[data-type="compliance"]').length;
+    const riskPct = Math.round((risks / totalRisks) * 100);
+    const compPct = Math.round((compliance / totalCompliance) * 100);
+    document.getElementById('risk-bar').style.width = riskPct + '%';
+    document.getElementById('risk-text').textContent = riskPct + '%';
+    document.getElementById('compliance-bar').style.width = compPct + '%';
+    document.getElementById('compliance-text').textContent = compPct + '%';
+    document.querySelectorAll('.check-item').forEach(item => {
+      const cb = item.querySelector('input');
+      if (cb.checked) item.classList.add('checked'); else item.classList.remove('checked');
+    });
+    const panel = document.getElementById('verdict-panel');
+    const icon = document.getElementById('verdict-icon');
+    const title = document.getElementById('verdict-title');
+    const sub = document.getElementById('verdict-sub');
+    const score = document.getElementById('verdict-score');
+    const status = document.getElementById('system-status');
+    const breach = document.getElementById('breach-warning');
+    score.textContent = `Compliance: ${compliance}/${totalCompliance} | Risk: ${risks}/${totalRisks}`;
+    let verdict = "AWAITING INPUT";
+    if (risks === 0 && compliance >= 4) {
+      icon.textContent = '🎯'; title.textContent = 'CLEAN EXECUTION'; title.style.color = 'var(--green)';
+      sub.textContent = 'All systems green. This is your standard.';
+      panel.style.setProperty('--verdict-color', 'var(--green)'); panel.style.setProperty('--verdict-glow', 'rgba(34,197,94,0.12)');
+      status.textContent = 'SYSTEM OPTIMAL'; status.className = 'status-pill active'; breach.classList.remove('show');
+      verdict = "CLEAN EXECUTION";
+    } else if (risks >= 3) {
+      icon.textContent = '🔴'; title.textContent = 'CRITICAL BREACH'; title.style.color = 'var(--red)';
+      sub.textContent = 'Multiple risk factors detected. Review protocol.';
+      panel.style.setProperty('--verdict-color', 'var(--red)'); panel.style.setProperty('--verdict-glow', 'rgba(239,68,68,0.12)');
+      status.textContent = 'BREACH DETECTED'; status.className = 'status-pill'; status.style.background = 'rgba(239,68,68,0.12)'; status.style.borderColor = 'var(--red)'; status.style.color = 'var(--red)';
+      breach.classList.add('show'); verdict = "CRITICAL BREACH";
+    } else if (risks >= 1) {
+      icon.textContent = '⚠️'; title.textContent = 'PARTIAL DISCIPLINE'; title.style.color = 'var(--yellow)';
+      sub.textContent = 'Trade executed with leaks. Identify the pattern.';
+      panel.style.setProperty('--verdict-color', 'var(--yellow)'); panel.style.setProperty('--verdict-glow', 'rgba(234,179,8,0.2)');
+      status.textContent = 'SYSTEM WARNING'; status.className = 'status-pill'; status.style.background = 'rgba(234,179,8,0.1)'; status.style.borderColor = 'var(--yellow)'; status.style.color = 'var(--yellow)';
+      breach.classList.remove('show'); verdict = "PARTIAL DISCIPLINE";
+    } else if (compliance > 0) {
+      icon.textContent = '🟡'; title.textContent = 'INCOMPLETE PROTOCOL'; title.style.color = 'var(--yellow)';
+      sub.textContent = 'Some checks passed. Aim for full compliance.';
+      panel.style.setProperty('--verdict-color', 'var(--yellow)'); panel.style.setProperty('--verdict-glow', 'rgba(234,179,8,0.2)');
+      status.textContent = 'PARTIAL COMPLIANCE'; status.className = 'status-pill'; status.style.background = 'rgba(234,179,8,0.1)'; status.style.borderColor = 'var(--yellow)'; status.style.color = 'var(--yellow)';
+      breach.classList.remove('show'); verdict = "INCOMPLETE PROTOCOL";
+    } else {
+      icon.textContent = '⏳'; title.textContent = 'AWAITING INPUT'; title.style.color = 'var(--text-dim)';
+      sub.textContent = 'Check your execution criteria above';
+      panel.style.setProperty('--verdict-color', 'var(--text-dim)'); panel.style.setProperty('--verdict-glow', 'transparent');
+      status.textContent = 'SYSTEM STANDBY'; status.className = 'status-pill'; status.style.background = '#1a1a1a'; status.style.borderColor = 'var(--border)'; status.style.color = 'var(--text-dim)';
+      breach.classList.remove('show');
+    }
+    return { riskScore: riskPct, complianceScore: compPct, verdict: verdict };
+  }
+
+  // ─── CHARTS ───
+  function loadImage(input, slotId) {
+    const slot = document.getElementById(slotId);
+    if (input.files && input.files[0]) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        let img = slot.querySelector('img');
+        if (!img) { img = document.createElement('img'); slot.insertBefore(img, slot.firstChild); }
+        img.src = e.target.result;
+        slot.classList.add('has-image');
+        slot.querySelector('.upload-icon').style.display = 'none';
+        slot.querySelector('.upload-text').style.display = 'none';
+      };
+      reader.readAsDataURL(input.files[0]);
+    }
+  }
+  function removeImage(e, slotId) {
+    e.stopPropagation();
+    const slot = document.getElementById(slotId);
+    const img = slot.querySelector('img');
+    if (img) img.remove();
+    slot.classList.remove('has-image');
+    slot.querySelector('.upload-icon').style.display = 'block';
+    slot.querySelector('.upload-text').style.display = 'block';
+    slot.querySelector('input[type="file"]').value = '';
+  }
+
+  // ─── CLOUD SAVE ───
+  async function saveToCloud() {
+    const url = getBrainUrl();
+    if (!url) return;
+    setStatus('☁️ Saving...', 'var(--yellow)');
+
+    const result = calculate();
+    const riskChecks = {}; const complianceChecks = {};
+    document.querySelectorAll('input[data-type="risk"]').forEach(cb => { riskChecks[cb.id] = cb.checked; });
+    document.querySelectorAll('input[data-type="compliance"]').forEach(cb => { complianceChecks[cb.id] = cb.checked; });
+
+    const chart1 = document.querySelector('#slot-1 img')?.src || '';
+    const chart2 = document.querySelector('#slot-2 img')?.src || '';
+    const chart3 = document.querySelector('#slot-3 img')?.src || '';
+
+    const payload = {
+      action: "save",
+      tradeId: TRADE_ID,
+      riskChecks, complianceChecks,
+      riskScore: result.riskScore,
+      complianceScore: result.complianceScore,
+      verdict: result.verdict,
+      notes: document.getElementById('notes-area').innerText,
+      chart1, chart2, chart3
+    };
+
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setStatus('✅ Saved to Syphon Brain at ' + new Date().toLocaleTimeString(), 'var(--green)');
+      } else {
+        setStatus('❌ Save failed: ' + (data.error || 'Unknown'), 'var(--red)');
+      }
+    } catch (err) {
+      setStatus('❌ Network error. Check your Brain URL.', 'var(--red)');
+    }
+  }
+
+  // ─── CLOUD LOAD ───
+  async function loadFromCloud() {
+    const url = getBrainUrl();
+    if (!url) return;
+    setStatus('📥 Loading...', 'var(--yellow)');
+
+    try {
+      const res = await fetch(url + '?action=load&tradeId=' + encodeURIComponent(TRADE_ID));
+      const data = await res.json();
+      if (data.success && data.trade) {
+        const t = data.trade;
+        // Restore checks
+        Object.entries(t.riskChecks || {}).forEach(([id, checked]) => {
+          const cb = document.getElementById(id); if (cb) cb.checked = checked;
+        });
+        Object.entries(t.complianceChecks || {}).forEach(([id, checked]) => {
+          const cb = document.getElementById(id); if (cb) cb.checked = checked;
+        });
+        // Restore charts
+        if (t.chart1) setChartFromData('slot-1', t.chart1);
+        if (t.chart2) setChartFromData('slot-2', t.chart2);
+        if (t.chart3) setChartFromData('slot-3', t.chart3);
+        // Restore notes
+        if (t.notes) document.getElementById('notes-area').innerText = t.notes;
+        calculate();
+        setStatus('✅ Loaded from Syphon Brain', 'var(--green)');
+      } else {
+        setStatus('ℹ️ No saved data for this trade', 'var(--text-dim)');
+      }
+    } catch (err) {
+      setStatus('❌ Load failed. Check your Brain URL.', 'var(--red)');
+    }
+  }
+
+  function setChartFromData(slotId, src) {
+    const slot = document.getElementById(slotId);
+    let img = slot.querySelector('img');
+    if (!img) { img = document.createElement('img'); slot.insertBefore(img, slot.firstChild); }
+    img.src = src;
+    slot.classList.add('has-image');
+    slot.querySelector('.upload-icon').style.display = 'none';
+    slot.querySelector('.upload-text').style.display = 'none';
+  }
+
+  // ─── TEST CONNECTION ───
+  async function testConnection() {
+    const url = getBrainUrl();
+    if (!url) return;
+    setStatus('🔗 Testing connection...', 'var(--yellow)');
+    try {
+      const res = await fetch(url + '?action=list');
+      const data = await res.json();
+      setStatus('✅ Connected! ' + (data.trades ? data.trades.length : 0) + ' trades in brain.', 'var(--green)');
+    } catch (err) {
+      setStatus('❌ Cannot connect. Make sure you deployed the Apps Script as Web App with "Anyone" access.', 'var(--red)');
+    }
+  }
+
+  // Auto-load on start if URL is set
+  window.addEventListener('DOMContentLoaded', () => {
+    if (BRAIN_URL) { loadFromCloud(); }
+  });
+</script>
+</body>
+</html>
