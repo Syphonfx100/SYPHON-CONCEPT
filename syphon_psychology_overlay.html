@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Syphon Psychology Overlay</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --panel: #141414;
+    --border: #262626;
+    --gold: #d4a94e;
+    --green: #22c55e;
+    --red: #ef4444;
+    --text: #e5e5e5;
+    --text-dim: #8a8a8a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: transparent;
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .header h1 {
+    font-size: 15px;
+    letter-spacing: 1px;
+    margin: 0;
+    text-transform: uppercase;
+  }
+  .header h1 span { color: var(--gold); }
+  .config-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-size: 12px;
+  }
+  .config-bar label { color: var(--text-dim); white-space: nowrap; min-width: 90px; }
+  .config-bar input {
+    flex: 1;
+    background: #000;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 10px;
+    color: var(--text);
+    font-size: 12px;
+  }
+  .config-bar button {
+    background: var(--gold);
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  #status-line { font-size: 12px; margin: 6px 0 16px; min-height: 16px; }
+  .columns { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 560px) { .columns { grid-template-columns: 1fr; } }
+  .col-header {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 12px; border-radius: 6px;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+  .col-header.risk { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+  .col-header.comp { background: rgba(34,197,94,0.12); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+  .check-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    background: #000; border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 12px; margin-bottom: 8px;
+    cursor: pointer;
+  }
+  .check-item input { margin-top: 3px; accent-color: var(--gold); cursor: pointer; }
+  .check-item .label { font-size: 13px; font-weight: 600; }
+  .check-item .sub { font-size: 11px; color: var(--text-dim); margin-top: 1px; }
+  .check-item.checked .label { text-decoration: line-through; color: var(--text-dim); }
+  .meter { margin-top: 14px; }
+  .meter-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
+  .meter-bar { height: 8px; border-radius: 4px; background: #000; overflow: hidden; border: 1px solid var(--border); }
+  .meter-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+  .verdict {
+    margin-top: 16px; text-align: center; padding: 10px;
+    border-radius: 8px; font-size: 13px; font-weight: 700; letter-spacing: 0.5px;
+  }
+  #notes-area {
+    margin-top: 16px; background: #000; border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px; min-height: 70px; font-size: 13px;
+    outline: none;
+  }
+  #notes-area:empty:before { content: attr(data-placeholder); color: var(--text-dim); }
+  .notes-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 14px; margin-bottom: 6px; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="header">
+    <h1>Syphon <span>Psychology</span> Overlay</h1>
+    <span id="trade-id-display" style="font-size:11px; color:var(--text-dim);"></span>
+  </div>
+
+  <div class="config-bar">
+    <label>🔗 Brain URL</label>
+    <input type="text" id="brain-url" placeholder="Paste your Google Apps Script Web App URL here...">
+    <button onclick="testConnection()">Connect</button>
+  </div>
+  <div class="config-bar">
+    <label>🆔 Entry ID</label>
+    <input type="text" id="trade-id-input" placeholder="auto-detected">
+  </div>
+  <div id="status-line"></div>
+
+  <div class="columns">
+    <div>
+      <div class="col-header risk">⚠ OPERATIONAL RISK EXPOSURE</div>
+      <div id="risk-list"></div>
+    </div>
+    <div>
+      <div class="col-header comp">✓ RULES & COMPLIANCE</div>
+      <div id="comp-list"></div>
+    </div>
+  </div>
+
+  <div class="meter">
+    <div class="meter-row"><span>Rules Compliance Rate</span><span id="comp-pct">0%</span></div>
+    <div class="meter-bar"><div class="meter-fill" id="comp-fill" style="width:0%; background:var(--green);"></div></div>
+  </div>
+  <div class="meter">
+    <div class="meter-row"><span>Operational Risk Exposure</span><span id="risk-pct">0%</span></div>
+    <div class="meter-bar"><div class="meter-fill" id="risk-fill" style="width:0%; background:var(--red);"></div></div>
+  </div>
+
+  <div id="verdict-box" class="verdict"></div>
+
+  <div class="notes-label">Notes — how did today actually feel?</div>
+  <div id="notes-area" contenteditable="true" data-placeholder="Write a short reflection..."></div>
+</div>
+
+<script>
+  const RISK_ITEMS = [
+    { id: 'revenge', label: 'Revenge Execution', sub: 'Emotionally driven entry' },
+    { id: 'fomo', label: 'FOMO / Chased Leg', sub: 'Entered after move started' },
+    { id: 'overleveraged', label: 'Over-Leveraged Position', sub: 'Exceeded risk parameters' },
+    { id: 'movedstop', label: 'Moved Stop Loss / Ignored Plan', sub: 'Broke system rules mid-trade' },
+    { id: 'earlyexit', label: 'Early Liquidation / Scared Money', sub: 'Closed before target or plan' }
+  ];
+  const COMP_ITEMS = [
+    { id: 'htfsweep', label: 'Waited for HTF Sweep', sub: 'Liquidity taken before entry' },
+    { id: 'macro', label: 'Checked Macro News', sub: 'No high-impact events active' },
+    { id: 'mss', label: 'MSS / Setup Confirmed', sub: 'Structure shift validated' },
+    { id: 'premdisc', label: 'Premium / Discount Zone', sub: 'Entry at optimal price' },
+    { id: 'walkaway', label: 'Execution Walkaway', sub: 'Closed charts post-trade' }
+  ];
+
+  function renderList(items, containerId, keyPrefix) {
+    const container = document.getElementById(containerId);
+    items.forEach(item => {
+      const row = document.createElement('label');
+      row.className = 'check-item';
+      row.id = keyPrefix + '-' + item.id;
+      row.innerHTML =
+        '<input type="checkbox" onchange="onCheckChange(\'' + keyPrefix + '\',\'' + item.id + '\', this)">' +
+        '<div><div class="label">' + item.label + '</div><div class="sub">' + item.sub + '</div></div>';
+      container.appendChild(row);
+    });
+  }
+  renderList(RISK_ITEMS, 'risk-list', 'risk');
+  renderList(COMP_ITEMS, 'comp-list', 'comp');
+
+  function onCheckChange(prefix, id, input) {
+    document.getElementById(prefix + '-' + id).classList.toggle('checked', input.checked);
+    calculate();
+    scheduleAutoSave();
+  }
+
+  function calculate() {
+    const riskChecked = RISK_ITEMS.filter(i => document.querySelector('#risk-' + i.id + ' input').checked).length;
+    const compChecked = COMP_ITEMS.filter(i => document.querySelector('#comp-' + i.id + ' input').checked).length;
+    const riskPct = Math.round((riskChecked / RISK_ITEMS.length) * 100);
+    const compPct = Math.round((compChecked / COMP_ITEMS.length) * 100);
+
+    document.getElementById('risk-pct').textContent = riskPct + '%';
+    document.getElementById('comp-pct').textContent = compPct + '%';
+    document.getElementById('risk-fill').style.width = riskPct + '%';
+    document.getElementById('comp-fill').style.width = compPct + '%';
+
+    let verdict, color, bg;
+    if (riskPct >= 40) { verdict = '⚠ HIGH RISK BEHAVIOR — REVIEW BEFORE NEXT TRADE'; color = 'var(--red)'; bg = 'rgba(239,68,68,0.12)'; }
+    else if (compPct >= 80 && riskPct === 0) { verdict = '✓ CLEAN EXECUTION — ON SYSTEM'; color = 'var(--green)'; bg = 'rgba(34,197,94,0.12)'; }
+    else { verdict = '◐ MIXED DAY — WORTH A CLOSER LOOK'; color = 'var(--gold)'; bg = 'rgba(212,169,78,0.12)'; }
+
+    const box = document.getElementById('verdict-box');
+    box.textContent = verdict;
+    box.style.color = color;
+    box.style.background = bg;
+    box.style.border = '1px solid ' + color;
+
+    return { riskPct, compPct, verdict };
+  }
+
+  document.getElementById('notes-area').addEventListener('input', scheduleAutoSave);
+
+  // ─── PAGE IDENTITY + CLOUD SYNC ───
+  let BRAIN_URL = localStorage.getItem('syphon_brain_url') || '';
+
+  function hashCode(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) { hash = ((hash << 5) - hash) + str.charCodeAt(i); hash |= 0; }
+    return Math.abs(hash);
+  }
+  function derivePageId() {
+    try {
+      const ref = document.referrer || '';
+      if (!ref) return null;
+      const match = ref.match(/[0-9a-f]{24,32}/i);
+      return match ? 'notion-' + match[0].slice(-16) : 'notion-' + hashCode(ref);
+    } catch (e) { return null; }
+  }
+
+  const urlTradeId = new URLSearchParams(window.location.search).get('trade');
+  const pageDerivedId = derivePageId();
+  let TRADE_ID = urlTradeId || pageDerivedId || ('entry-' + Date.now());
+  const autoDetectFailed = !urlTradeId && !pageDerivedId;
+
+  if (BRAIN_URL) document.getElementById('brain-url').value = BRAIN_URL;
+  document.getElementById('trade-id-input').value = TRADE_ID;
+  document.getElementById('trade-id-display').textContent = TRADE_ID;
+
+  function setStatus(msg, color) {
+    const el = document.getElementById('status-line');
+    el.textContent = msg;
+    el.style.color = color || 'var(--text-dim)';
+  }
+
+  if (autoDetectFailed) {
+    setStatus('⚠ Could not auto-detect this page — add ?trade=yourid to the embed URL', 'var(--red)');
+  }
+
+  function getBrainUrl() {
+    const url = document.getElementById('brain-url').value.trim();
+    if (!url) return null;
+    BRAIN_URL = url;
+    localStorage.setItem('syphon_brain_url', url);
+    return url;
+  }
+
+  function getTradeId() {
+    const val = document.getElementById('trade-id-input').value.trim();
+    TRADE_ID = val || TRADE_ID;
+    return TRADE_ID;
+  }
+
+  async function testConnection() {
+    const url = getBrainUrl();
+    if (!url) { setStatus('Paste your Brain URL first', 'var(--red)'); return; }
+    setStatus('Connecting...', 'var(--text-dim)');
+    try {
+      const res = await fetch(url + '?action=list');
+      const data = await res.json();
+      if (data.success) setStatus('✓ Connected — ' + data.entries.length + ' entries stored', 'var(--green)');
+      else setStatus('Connected, but: ' + (data.error || 'unknown response'), 'var(--gold)');
+      loadFromCloud();
+    } catch (err) {
+      setStatus('✗ Cannot connect. Check your Brain URL.', 'var(--red)');
+    }
+  }
+
+  let autoSaveTimer = null;
+  function scheduleAutoSave() {
+    if (!document.getElementById('brain-url').value.trim()) return;
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(saveToCloud, 1200);
+  }
+
+  async function saveToCloud() {
+    const url = getBrainUrl();
+    if (!url) return;
+    const result = calculate();
+    const riskChecks = {}; RISK_ITEMS.forEach(i => riskChecks[i.id] = document.querySelector('#risk-' + i.id + ' input').checked);
+    const compChecks = {}; COMP_ITEMS.forEach(i => compChecks[i.id] = document.querySelector('#comp-' + i.id + ' input').checked);
+
+    const payload = {
+      action: 'save',
+      tradeId: getTradeId(),
+      riskChecks, complianceChecks: compChecks,
+      riskScore: result.riskPct, complianceScore: result.compPct, verdict: result.verdict,
+      notes: document.getElementById('notes-area').innerText
+    };
+    try {
+      await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
+      setStatus('💾 Saved — ' + new Date().toLocaleTimeString(), 'var(--green)');
+    } catch (err) {
+      setStatus('✗ Save failed. Check your Brain URL.', 'var(--red)');
+    }
+  }
+
+  async function loadFromCloud() {
+    const url = getBrainUrl();
+    if (!url) return;
+    try {
+      const res = await fetch(url + '?action=load&tradeId=' + encodeURIComponent(getTradeId()));
+      const data = await res.json();
+      if (data.success && data.entry) {
+        const e = data.entry;
+        RISK_ITEMS.forEach(i => {
+          const cb = document.querySelector('#risk-' + i.id + ' input');
+          cb.checked = !!(e.riskChecks || {})[i.id];
+          document.getElementById('risk-' + i.id).classList.toggle('checked', cb.checked);
+        });
+        COMP_ITEMS.forEach(i => {
+          const cb = document.querySelector('#comp-' + i.id + ' input');
+          cb.checked = !!(e.complianceChecks || {})[i.id];
+          document.getElementById('comp-' + i.id).classList.toggle('checked', cb.checked);
+        });
+        document.getElementById('notes-area').innerText = e.notes || '';
+        calculate();
+        setStatus('✓ Loaded from Syphon Brain', 'var(--green)');
+      } else {
+        calculate();
+        setStatus('ℹ New entry — nothing saved here yet', 'var(--text-dim)');
+      }
+    } catch (err) {
+      setStatus('✗ Load failed. Check your Brain URL.', 'var(--red)');
+    }
+  }
+
+  calculate();
+  window.addEventListener('DOMContentLoaded', () => { if (BRAIN_URL) loadFromCloud(); });
+  if (BRAIN_URL) loadFromCloud();
+</script>
+
+</body>
+</html>
